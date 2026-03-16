@@ -337,7 +337,7 @@ const STEP_LABELS = [
   'Checking existing contact',          // 1
   'Creating account record',            // 2
   'Creating contact record',            // 3
-  'Creating lead record',               // 4
+  'Creating lead or case record',               // 4
   'Connecting to Marketing Cloud',      // 5
   'Sending to Marketing Cloud'          // 6
 ];

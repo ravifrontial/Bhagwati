@@ -1,154 +1,157 @@
 // routes/enquiry.js
 const express = require('express');
 const router  = express.Router();
-const { getSFToken, findContact, insertLead, insertAccount, insertContact } = require('../services/salesforce');
+
+const { getSFToken, findContact, insertAccount, insertContact, insertLead, insertCase } = require('../services/salesforce');
 const { getMCToken, fireJourneyEvent } = require('../services/marketingCloud');
 
 /* ─────────────────────────────────────────────────
-   Helper: extract a clean error message from
-   axios errors (SF returns array of error objects)
-   Also logs the full response body so you can see
-   exactly what SF/MC returned.
-───────────────────────────────────────────────── */
-function extractError(err) {
-  if (err.response) {
-    const data   = err.response.data;
-    const status = err.response.status;
-    // Always log full body for debugging
-    console.error(`[API error] HTTP ${status}:`, JSON.stringify(data, null, 2));
-    // Salesforce wraps errors in an array: [{ message, errorCode }]
-    if (Array.isArray(data) && data[0]?.message) return `[${data[0].errorCode}] ${data[0].message}`;
-    if (data?.error_description) return data.error_description;
-    if (data?.message)           return data.message;
-    return `HTTP ${status}`;
-  }
-  // Network / timeout / no response
-  console.error('[API error] No response:', err.message);
-  return err.message || 'Unknown error';
-}
-
-/* ─────────────────────────────────────────────────
-   POST /api/enquiry
-   Body: { firstName, lastName, email, mobile,
-           state, city, category, subject,
-           productType, description }
-
-   Response shape (always JSON):
-   {
-     success: true | false,
-     sfSaved: true | false,       // were SF records saved?
-     mcSent:  true | false,       // was MC event fired?
-     contactKey: string | null,
-     steps: [                     // per-step result log
-       { step, status, message }
-     ],
-     error: string | null         // top-level error if total failure
-   }
+   POST /api/submit-enquiry
 ───────────────────────────────────────────────── */
 router.post('/', async (req, res) => {
-  const payload = req.body;
-  const steps   = [];
-  let sfSaved    = false;
-  let mcSent     = false;
-  let contactKey = null;
+  const {
+    firstName,
+    lastName,
+    email,
+    mobile,
+    state,
+    city,
+    category,
+    subject,
+    productType,
+    description
+  } = req.body;
 
-  /* ── STEP 0: Salesforce Auth ── */
+  // ── DEBUG: log every field individually so you can
+  //    see exactly what value category holds
+  console.log('[Route] Incoming payload:', req.body);
+  console.log('[Route] category raw value:', JSON.stringify(category));
+  console.log('[Route] category lowercased:', category?.toLowerCase());
+
+  // ── Step 1: Get Salesforce token ──────────────────
   let sfToken;
   try {
     sfToken = await getSFToken();
-    steps.push({ step: 'SF Auth', status: 'ok', message: 'Token obtained' });
   } catch (err) {
-    const msg = extractError(err);
-    steps.push({ step: 'SF Auth', status: 'fail', message: msg });
-    return res.status(502).json({ success: false, sfSaved, mcSent, contactKey, steps, error: `Salesforce auth failed: ${msg}` });
-  }
-
-  /* ── STEP 1: Check contact exists ── */
-  try {
-    contactKey = await findContact(sfToken, payload.email, payload.mobile);
-    steps.push({
-      step   : 'Contact Lookup',
-      status : 'ok',
-      message: contactKey ? `Existing contact found: ${contactKey}` : 'No existing contact'
+    console.error('[SF] Token error:', err.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to authenticate with Salesforce.'
     });
+  }
+
+  // ── Step 2: Check if contact exists ──────────────
+  let contactId; let leadId; let caseId;
+  try {
+    contactId = await findContact(sfToken, email, mobile);
   } catch (err) {
-    const msg = extractError(err);
-    steps.push({ step: 'Contact Lookup', status: 'fail', message: msg });
-    return res.status(502).json({ success: false, sfSaved, mcSent, contactKey, steps, error: `Contact lookup failed: ${msg}` });
+    console.error('[SF] findContact error:', err.response?.data || err.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to query Salesforce contacts.'
+    });
   }
 
-  /* ── STEPS 2-4: New contact flow ──
-     Order: Account → Contact → Lead
-  ── */
-  if (!contactKey) {
-
-    /* STEP 2: Insert Account */
-    let accountId;
+  // ── Step 3: If no contact, create Account + Contact
+  if (!contactId) {
     try {
-      accountId = await insertAccount(sfToken, payload);
-      steps.push({ step: 'Insert Account', status: 'ok', message: `Account created: ${accountId}` });
+      const accountId = await insertAccount(sfToken, { firstName, lastName, mobile });
+      contactId = await insertContact(sfToken, accountId, { firstName, lastName, email, mobile });
     } catch (err) {
-      const msg = extractError(err);
-      steps.push({ step: 'Insert Account', status: 'fail', message: msg });
-      return res.status(502).json({ success: false, sfSaved, mcSent, contactKey, steps, error: `Account creation failed: ${msg}` });
+      console.error('[SF] Account/Contact creation error:', err.response?.data || err.message);
+      return res.status(500).json({
+        success: false,
+        message: err.response?.data?.[0]?.message || 'Failed to create Salesforce Account/Contact.'
+      });
     }
-
-    /* STEP 3: Insert Contact (linked to account) */
-    try {
-      contactKey = await insertContact(sfToken, accountId, payload);
-      steps.push({ step: 'Insert Contact', status: 'ok', message: `Contact created: ${contactKey}` });
-    } catch (err) {
-      const msg = extractError(err);
-      steps.push({ step: 'Insert Contact', status: 'fail', message: msg });
-      return res.status(502).json({ success: false, sfSaved, mcSent, contactKey, steps, error: `Contact creation failed: ${msg}` });
-    }
-
-    /* STEP 4: Insert Lead */
-    try {
-      await insertLead(sfToken, payload);
-      steps.push({ step: 'Insert Lead', status: 'ok', message: 'Lead record created' });
-    } catch (err) {
-      const msg = extractError(err);
-      steps.push({ step: 'Insert Lead', status: 'fail', message: msg });
-      return res.status(502).json({ success: false, sfSaved, mcSent, contactKey, steps, error: `Lead creation failed: ${msg}` });
-    }
-
   }
 
-  sfSaved = true;
+  // ── Step 4: Create Lead (purchase) or Case (all others)
+  //
+  // Trim + lowercase so "Purchase ", "PURCHASE", "purchase" all match.
+  // Anything that is NOT exactly "purchase" → Case.
+  const normalizedCategory = category?.trim().toLowerCase();
+  const isPurchase = normalizedCategory === 'purchase';
 
-  /* ── STEP 5: Marketing Cloud Auth ── */
+  console.log(`[Route] normalizedCategory: "${normalizedCategory}" | isPurchase: ${isPurchase}`);
+  console.log(`[Route] Will create: ${isPurchase ? 'LEAD' : 'CASE'}`);
+
+  try {
+    if (isPurchase) {
+      const sfLeadId = await insertLead(sfToken, {
+        firstName,
+        lastName,
+        email,
+        mobile,
+        state,
+        city,
+        category,
+        subject,
+        description
+      });
+        leadId = sfLeadId;
+      console.log('[Route] Lead flow completed', sfLeadId);
+    } else {
+     const sfCase = await insertCase(sfToken, contactId, {
+        email,
+        state,
+        city,
+        subject,
+        productType,
+        description
+      });
+      caseId = sfCase;
+      console.log('[Route] Case flow completed', caseId);
+    }
+  } catch (err) {
+    console.error(`[SF] ${isPurchase ? 'Lead' : 'Case'} creation error:`, err.response?.data || err.message);
+    return res.status(500).json({
+      success: false,
+      message: err.response?.data?.[0]?.message || `Failed to create Salesforce ${isPurchase ? 'Lead' : 'Case'}.`
+    });
+  }
+
+  // ── Step 5: Get Marketing Cloud token ────────────
   let mcToken;
   try {
     mcToken = await getMCToken();
-    steps.push({ step: 'MC Auth', status: 'ok', message: 'Token obtained' });
   } catch (err) {
-    const msg = extractError(err);
-    steps.push({ step: 'MC Auth', status: 'fail', message: msg });
-    // SF saved — partial success
-    return res.status(207).json({
-      success: false, sfSaved, mcSent, contactKey, steps,
-      error: `Salesforce records saved ✓ — Marketing Cloud auth failed: ${msg}`
+    console.error('[MC] Token error:', err.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to authenticate with Marketing Cloud.'
     });
   }
 
-  /* ── STEP 6: Fire MC Journey Event ── */
+  // ── Step 6: Fire Journey Builder event ───────────
   try {
-    await fireJourneyEvent(mcToken, contactKey, payload);
-    mcSent = true;
-    steps.push({ step: 'MC Journey Event', status: 'ok', message: 'Event fired successfully' });
+    await fireJourneyEvent(mcToken, contactId, {
+      firstName,
+      lastName,
+      email,
+      mobile,
+      state,
+      city,
+      category,
+      subject,
+      productType,
+      description,
+      caseId
+    });
   } catch (err) {
-    const msg = extractError(err);
-    steps.push({ step: 'MC Journey Event', status: 'fail', message: msg });
-    // SF saved — partial success
-    return res.status(207).json({
-      success: false, sfSaved, mcSent, contactKey, steps,
-      error: `Salesforce records saved ✓ — Journey entry failed: ${msg}`
+    console.error('[MC] Journey event error:', err.response?.data || err.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Salesforce records created but failed to trigger Marketing Cloud journey.'
     });
   }
 
-  /* ── Full success ── */
-  return res.status(200).json({ success: true, sfSaved, mcSent, contactKey, steps, error: null });
+  // ── All steps succeeded ───────────────────────────
+  console.log('[Route] Enquiry submitted successfully');
+  return res.status(200).json({
+    success: true,
+    message: 'Enquiry submitted successfully!'
+  });
 });
 
 module.exports = router;

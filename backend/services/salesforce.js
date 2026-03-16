@@ -5,8 +5,6 @@ const axios = require('axios');
    NOTE: env vars are read INSIDE each function
    so that dotenv.config() in server.js has already
    run before these values are accessed.
-   Reading them at module-load time causes undefined
-   because Node requires services before dotenv loads.
 ───────────────────────────────────────────────── */
 
 /* ─────────────────────────────────────────────────
@@ -21,7 +19,8 @@ async function getSFToken() {
     throw new Error('Salesforce env vars missing (SF_BASE_URL / SF_CLIENT_ID / SF_CLIENT_SECRET)');
   }
 
-  const url = `${SF_BASE}/services/oauth2/token` +
+  const url =
+    `${SF_BASE}/services/oauth2/token` +
     `?grant_type=client_credentials` +
     `&client_id=${encodeURIComponent(SF_CLIENT_ID)}` +
     `&client_secret=${encodeURIComponent(SF_SECRET)}`;
@@ -44,7 +43,7 @@ async function findContact(token, email, phone) {
   const SF_BASE = process.env.SF_BASE_URL;
 
   const soql = `SELECT Id FROM Contact WHERE Email='${email}' OR Phone='${phone}'`;
-  const res  = await axios.get(
+  const res = await axios.get(
     `${SF_BASE}/services/data/v64.0/query`,
     {
       params : { q: soql },
@@ -115,35 +114,38 @@ async function insertContact(token, accountId, payload) {
 }
 
 /* ─────────────────────────────────────────────────
-   5.  Insert Lead record
-       FIX 1: Company is REQUIRED on Lead — without
-              it SF returns 400 "Required fields missing"
-       FIX 2: Custom fields (State__c etc.) may not
-              exist in your org — they are sent but
-              won't cause a 502 if missing; SF ignores
-              unknown fields only when using REST.
-              If you get INVALID_FIELD errors, remove
-              those custom fields until they are
-              created in your SF org.
-       FIX 3: Removed the `if (!res.data?.success)`
-              check — SF Lead insert returns 201 on
-              success; axios already throws on 4xx/5xx
-              so the check was masking the real error.
+   5.  Insert Lead (category === 'purchase')
+       - Signature: insertLead(token, payload)
+         payload must have: firstName, lastName,
+         email, mobile, and optionally state, city,
+         category, subject, description, company
+       - FIX: removed the unused `contactKey` second
+         param that was shadowing `payload` and causing
+         firstName / lastName to read as undefined
 ───────────────────────────────────────────────── */
 async function insertLead(token, payload) {
   const SF_BASE = process.env.SF_BASE_URL;
+
+  // Guard: catch missing required fields early so the
+  // error message is clear instead of an SF 400
+  if (!payload.firstName || !payload.lastName) {
+    throw new Error(
+      `insertLead: firstName or lastName is missing. ` +
+      `Received payload: ${JSON.stringify(payload)}`
+    );
+  }
 
   const body = {
     FirstName  : payload.firstName,
     LastName   : payload.lastName,
     Email      : payload.email,
     MobilePhone: payload.mobile,
-    // Company is REQUIRED on Lead — use company name if available, else fallback
+    // Company is REQUIRED on Lead
     Company    : payload.company || `${payload.firstName} ${payload.lastName}`,
     Status     : 'New',
     Description: payload.description,
-    // Custom fields — only included if your SF org has them
-    // Remove any that don't exist in your org to avoid INVALID_FIELD errors
+    LeadSource : 'Website',
+    // Custom fields — only sent if values exist
     ...(payload.state    && { State__c    : payload.state    }),
     ...(payload.city     && { City__c     : payload.city     }),
     ...(payload.category && { Category__c : payload.category }),
@@ -153,13 +155,58 @@ async function insertLead(token, payload) {
   const res = await axios.post(
     `${SF_BASE}/services/data/v64.0/sobjects/Lead/`,
     body,
-    { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+    {
+      headers: {
+        Authorization                : `Bearer ${token}`,
+        'Content-Type'               : 'application/json',
+        'Sforce-Duplicate-Rule-Header': 'allowSave=true'
+      }
+    }
   );
 
-  // axios throws on non-2xx, so if we reach here the insert succeeded
   const id = res.data?.id;
   console.log(`[SF] Lead created: ${id}`);
   return id;
 }
 
-module.exports = { getSFToken, findContact, insertLead, insertAccount, insertContact };
+/* ─────────────────────────────────────────────────
+   6.  Insert Case (category !== 'purchase')
+───────────────────────────────────────────────── */
+async function insertCase(token, contactId, payload) {
+  const SF_BASE = process.env.SF_BASE_URL;
+
+  const body = {
+    ContactId    : contactId,
+    SuppliedEmail: payload.email,
+    Subject      : payload.subject,
+    Origin       : 'Website',
+    Description  : payload.description,
+    ...(payload.state       && { State__c        : payload.state       }),
+    ...(payload.city        && { City__c         : payload.city        }),
+    ...(payload.subject     && { Subject__c      : payload.subject     }),
+    ...(payload.productType && { Product_Type__c : payload.productType })
+  };
+
+  console.log('[SF] insertCase body:', body);
+
+  const res = await axios.post(
+    `${SF_BASE}/services/data/v64.0/sobjects/Case/`,
+    body,
+    {
+      headers: {
+        Authorization : `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+
+  if (!res.data?.success) {
+    throw new Error(`Case insert failed: ${JSON.stringify(res.data?.errors)}`);
+  }
+
+  const id = res.data?.id;
+  console.log(`[SF] Case created: ${id}`);
+  return id;
+}
+
+module.exports = { getSFToken, findContact, insertAccount, insertContact, insertLead, insertCase };

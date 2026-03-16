@@ -46,43 +46,68 @@ async function getMCToken() {
 ───────────────────────────────────────────────── */
 async function fireJourneyEvent(token, contactKey, payload) {
   const MC_SUBDOMAIN = process.env.MC_SUBDOMAIN;
-  const MC_EVENT_KEY = process.env.MC_EVENT_DEF_KEY;
 
-  if (!MC_SUBDOMAIN || !MC_EVENT_KEY) {
+  if (!MC_SUBDOMAIN) {
     throw new Error('Marketing Cloud env vars missing (MC_SUBDOMAIN / MC_EVENT_DEF_KEY)');
   }
 
-  const res = await axios.post(
-    `https://${MC_SUBDOMAIN}.rest.marketingcloudapis.com/interaction/v1/events`,
-    {
-      ContactKey        : contactKey,
-      EventDefinitionKey: MC_EVENT_KEY,
-      Data: {
-        contactKey  : contactKey,
-        firstName   : payload.firstName,
-        lastName    : payload.lastName,
-        email       : payload.email,
-        mobile      : payload.mobile,
-        state       : payload.state,
-        city        : payload.city,
-        category    : payload.category,
-        subject     : payload.subject,
-        productType : payload.productType,
-        description : payload.description,
-        leadStatus  : 'new'
-      }
-    },
-    {
-      headers: {
-        Authorization : `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    }
-  );
+  const leadPayload = {
+     contactKey  : contactKey,
+     firstName   : payload.firstName,
+     lastName    : payload.lastName,
+     email       : payload.email,
+     mobile      : payload.mobile,
+     state       : payload.state,
+     city        : payload.city,
+     category    : payload.category,
+     subject     : payload.subject,
+     productType : payload.productType,
+     description : payload.description,
+     leadStatus  : 'New'
+  };
 
-  // MC returns 201 on success; axios throws on 4xx/5xx automatically
-  console.log('[MC] Journey event fired, status:', res.status);
-  return res.data;
+  const casePayload = {
+     contactKey  : contactKey,
+     firstName   : payload.firstName,
+     lastName    : payload.lastName,
+     email       : payload.email,
+     mobile      : payload.mobile,
+     state       : payload.state,
+     city        : payload.city,
+     category    : payload.category,
+     subject     : payload.subject,
+     productType : payload.productType,
+     description : payload.description,
+     caseTokenId : payload.caseId,
+     CaseOrigin  : 'Website'
+  };
+
+  const isPurchase = payload.category?.trim().toLowerCase() === 'purchase';
+  const payloadToSend = isPurchase ? leadPayload : casePayload;  
+
+  try {
+    const res = await axios.post(
+      `https://${MC_SUBDOMAIN}.rest.marketingcloudapis.com/interaction/v1/events`,
+      {
+        ContactKey        : contactKey,
+        EventDefinitionKey: isPurchase ? process.env.MC_EVENT_DEF_LEAD_KEY : process.env.MC_EVENT_DEF_CASE_KEY,
+        Data: payloadToSend
+      },
+      {
+        headers: {
+          Authorization : `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    // MC returns 201 on success; axios throws on 4xx/5xx automatically
+    console.log('[MC] Journey event fired, status:', isPurchase ? 'Lead' : 'Case', res.status);
+    return res.data;
+  } catch (err) {
+    console.error('[MC] Journey event error:', err.response?.data || err.message);
+    throw new Error('Failed to fire Marketing Cloud journey event.');
+  }
 }
 
 module.exports = { getMCToken, fireJourneyEvent };
