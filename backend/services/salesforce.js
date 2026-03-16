@@ -165,6 +165,7 @@ async function insertLead(token, payload) {
   );
 
   const id = res.data?.id;
+    if (!id) throw new Error(`Lead insert failed: ${JSON.stringify(res.data?.errors)}`);
   console.log(`[SF] Lead created: ${id}`);
   return id;
 }
@@ -205,6 +206,7 @@ async function insertCase(token, contactId, payload) {
   }
 
   const id = res.data?.id;
+    if (!id) throw new Error(`Case insert failed: no id returned, response: ${JSON.stringify(res.data)}`);
   console.log(`[SF] Case created: ${id}`);
   return id;
 }

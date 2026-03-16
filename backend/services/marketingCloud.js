@@ -100,6 +100,7 @@ async function fireJourneyEvent(token, contactKey, payload) {
         }
       }
     );
+    if(!res) throw new Error(`No response from MC when firing journey event`);
 
     // MC returns 201 on success; axios throws on 4xx/5xx automatically
     console.log('[MC] Journey event fired, status:', isPurchase ? 'Lead' : 'Case', res.status);

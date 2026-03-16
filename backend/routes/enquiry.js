@@ -6,7 +6,7 @@ const { getSFToken, findContact, insertAccount, insertContact, insertLead, inser
 const { getMCToken, fireJourneyEvent } = require('../services/marketingCloud');
 
 /* ─────────────────────────────────────────────────
-   POST /api/submit-enquiry
+   POST /api/enquiry  (mounted as '/' in server.js)
 ───────────────────────────────────────────────── */
 router.post('/', async (req, res) => {
   const {
@@ -22,11 +22,11 @@ router.post('/', async (req, res) => {
     description
   } = req.body;
 
-  // ── DEBUG: log every field individually so you can
-  //    see exactly what value category holds
+  // Prepend country code — strip leading 0 or existing +91 first to avoid doubles
+  const normalizedMobile = '91' + mobile?.toString().replace(/^(\+91|91|0)/, '').trim();
+
   console.log('[Route] Incoming payload:', req.body);
-  console.log('[Route] category raw value:', JSON.stringify(category));
-  console.log('[Route] category lowercased:', category?.toLowerCase());
+  console.log('[Route] normalizedMobile:', normalizedMobile);
 
   // ── Step 1: Get Salesforce token ──────────────────
   let sfToken;
@@ -36,78 +36,72 @@ router.post('/', async (req, res) => {
     console.error('[SF] Token error:', err.message);
     return res.status(500).json({
       success: false,
-      message: 'Failed to authenticate with Salesforce.'
+      step   : 'sf_auth',
+      message: 'Failed to authenticate with Salesforce. Please try again later.'
     });
   }
 
   // ── Step 2: Check if contact exists ──────────────
-  let contactId; let leadId; let caseId;
+  // NOTE: null = not found (valid), only throw = real error
+  let contactId;
   try {
-    contactId = await findContact(sfToken, email, mobile);
+    contactId = await findContact(sfToken, email, normalizedMobile);
+    console.log('[Route] findContact result:', contactId ?? 'not found — will create');
   } catch (err) {
     console.error('[SF] findContact error:', err.response?.data || err.message);
     return res.status(500).json({
       success: false,
-      message: 'Failed to query Salesforce contacts.'
+      step   : 'sf_find_contact',
+      message: 'Failed to query Salesforce contacts. Please try again later.'
     });
   }
 
   // ── Step 3: If no contact, create Account + Contact
   if (!contactId) {
     try {
-      const accountId = await insertAccount(sfToken, { firstName, lastName, mobile });
-      contactId = await insertContact(sfToken, accountId, { firstName, lastName, email, mobile });
+      const accountId = await insertAccount(sfToken, { firstName, lastName, mobile: normalizedMobile });
+      console.log('[Route] Account created:', accountId);
+
+      contactId = await insertContact(sfToken, accountId, { firstName, lastName, email, mobile: normalizedMobile });
+      console.log('[Route] Contact created:', contactId);
     } catch (err) {
       console.error('[SF] Account/Contact creation error:', err.response?.data || err.message);
       return res.status(500).json({
         success: false,
-        message: err.response?.data?.[0]?.message || 'Failed to create Salesforce Account/Contact.'
+        step   : 'sf_create_contact',
+        message: err.response?.data?.[0]?.message || 'Failed to create Salesforce Account/Contact. Please try again later.'
       });
     }
   }
 
   // ── Step 4: Create Lead (purchase) or Case (all others)
-  //
-  // Trim + lowercase so "Purchase ", "PURCHASE", "purchase" all match.
-  // Anything that is NOT exactly "purchase" → Case.
   const normalizedCategory = category?.trim().toLowerCase();
-  const isPurchase = normalizedCategory === 'purchase';
+  const isPurchase         = normalizedCategory === 'purchase';
 
-  console.log(`[Route] normalizedCategory: "${normalizedCategory}" | isPurchase: ${isPurchase}`);
+  console.log(`[Route] category: "${category}" | normalizedCategory: "${normalizedCategory}" | isPurchase: ${isPurchase}`);
   console.log(`[Route] Will create: ${isPurchase ? 'LEAD' : 'CASE'}`);
 
+  let leadId, caseId;
   try {
     if (isPurchase) {
-      const sfLeadId = await insertLead(sfToken, {
-        firstName,
-        lastName,
-        email,
-        mobile,
-        state,
-        city,
-        category,
-        subject,
-        description
+      leadId = await insertLead(sfToken, {
+        firstName, lastName, email,
+        mobile: normalizedMobile,
+        state, city, category, subject, description
       });
-        leadId = sfLeadId;
-      console.log('[Route] Lead flow completed', sfLeadId);
+      console.log('[Route] Lead flow completed, leadId:', leadId);
     } else {
-     const sfCase = await insertCase(sfToken, contactId, {
-        email,
-        state,
-        city,
-        subject,
-        productType,
-        description
+      caseId = await insertCase(sfToken, contactId, {
+        email, state, city, subject, productType, description
       });
-      caseId = sfCase;
-      console.log('[Route] Case flow completed', caseId);
+      console.log('[Route] Case flow completed, caseId:', caseId);
     }
   } catch (err) {
     console.error(`[SF] ${isPurchase ? 'Lead' : 'Case'} creation error:`, err.response?.data || err.message);
     return res.status(500).json({
       success: false,
-      message: err.response?.data?.[0]?.message || `Failed to create Salesforce ${isPurchase ? 'Lead' : 'Case'}.`
+      step   : isPurchase ? 'sf_create_lead' : 'sf_create_case',
+      message: err.response?.data?.[0]?.message || `Failed to create Salesforce ${isPurchase ? 'Lead' : 'Case'}. Please try again later.`
     });
   }
 
@@ -119,30 +113,26 @@ router.post('/', async (req, res) => {
     console.error('[MC] Token error:', err.message);
     return res.status(500).json({
       success: false,
-      message: 'Failed to authenticate with Marketing Cloud.'
+      step   : 'mc_auth',
+      message: 'Salesforce records saved but failed to authenticate with Marketing Cloud.'
     });
   }
 
   // ── Step 6: Fire Journey Builder event ───────────
   try {
     await fireJourneyEvent(mcToken, contactId, {
-      firstName,
-      lastName,
-      email,
-      mobile,
-      state,
-      city,
-      category,
-      subject,
-      productType,
-      description,
+      firstName, lastName, email,
+      mobile: normalizedMobile,
+      state, city, category, subject, productType, description,
       caseId
     });
+    console.log('[MC] Journey event fired successfully');
   } catch (err) {
     console.error('[MC] Journey event error:', err.response?.data || err.message);
     return res.status(500).json({
       success: false,
-      message: 'Salesforce records created but failed to trigger Marketing Cloud journey.'
+      step   : 'mc_journey',
+      message: 'Salesforce records saved but failed to trigger Marketing Cloud journey.'
     });
   }
 
