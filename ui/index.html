@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bhagwati</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <header class="navbar">
+      <div class="logo">
+        <img src="https://bhagwatimachines.com/img/logo1.webp" alt="Bhagwati Logo" />
+      </div>
+      <nav class="nav-links" id="navLinks">
+        <a href="#">Company</a>
+        <a href="#">Excellence</a>
+        <a href="#">Divisions</a>
+        <a href="#">Media</a>
+        <a href="#">Career</a>
+        <a href="#">Contact</a>
+      </nav>
+      <div class="menu-toggle" id="menuToggle">☰</div>
+    </header>
+
+    <section class="contact-section">
+      <div class="contact-container">
+
+        <!-- LEFT SIDE -->
+        <div class="about-company">
+          <h2>About Bhagwati Machines</h2>
+          <p>
+            Shri Bhagwati Machines Pvt. Ltd. is a leading manufacturer and
+            exporter of advanced industrial machinery with over two decades of
+            engineering excellence. The company specializes in the development
+            of high-performance stone processing machines, cranes, fiber laser
+            cutting machines, and industrial infrastructure solutions.
+          </p>
+          <p>
+            From stone cutting machinery to advanced industrial equipment, we
+            focus on precision engineering, modern technology, and customer
+            satisfaction. Our goal is to empower industries with efficient,
+            durable, and future-ready machinery.
+          </p>
+        </div>
+
+        <!-- RIGHT SIDE FORM -->
+        <div class="contact-form">
+          <h2>Send Enquiry</h2>
+          <form id="enquiryForm" novalidate>
+
+            <div class="form-row">
+              <div class="field-group">
+                <div class="input-field" id="wrap-firstName">
+                  <i class="fa-solid fa-user"></i>
+                  <input type="text" id="firstName" placeholder="First Name" autocomplete="off" required />
+                </div>
+                <span class="field-error" id="err-firstName"></span>
+              </div>
+              <div class="field-group">
+                <div class="input-field" id="wrap-lastName">
+                  <i class="fa-solid fa-user"></i>
+                  <input type="text" id="lastName" placeholder="Last Name" autocomplete="off" required />
+                </div>
+                <span class="field-error" id="err-lastName"></span>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="field-group">
+                <div class="input-field" id="wrap-email">
+                  <i class="fa-solid fa-envelope"></i>
+                  <input type="email" id="email" placeholder="Email" autocomplete="off" required />
+                </div>
+                <span class="field-error" id="err-email"></span>
+              </div>
+              <div class="field-group">
+                <div class="input-field" id="wrap-mobile">
+                  <i class="fa-solid fa-phone"></i>
+                  <input type="text" id="mobile" placeholder="Mobile (10 digits)" autocomplete="off" required />
+                </div>
+                <span class="field-error" id="err-mobile"></span>
+              </div>
+            </div>
+
+            <!-- STATE & CITY with autocomplete -->
+            <div class="form-row">
+              <div class="field-group">
+                <div class="input-field ac-wrap" id="wrap-state">
+                  <i class="fa-solid fa-location-dot"></i>
+                  <input type="text" id="state" placeholder="State" autocomplete="off" required />
+                  <ul class="ac-list" id="stateList"></ul>
+                </div>
+                <span class="field-error" id="err-state"></span>
+              </div>
+              <div class="field-group">
+                <div class="input-field ac-wrap" id="wrap-city">
+                  <i class="fa-solid fa-city"></i>
+                  <input type="text" id="city" placeholder="City" autocomplete="off" required />
+                  <ul class="ac-list" id="cityList"></ul>
+                </div>
+                <span class="field-error" id="err-city"></span>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="field-group">
+                <div class="input-field" id="wrap-category">
+                  <i class="fa-solid fa-layer-group"></i>
+                  <select id="category" required>
+                    <option value="">Category</option>
+                    <option>Purchase</option>
+                    <option>Service</option>
+                  </select>
+                </div>
+                <span class="field-error" id="err-category"></span>
+              </div>
+              <div class="field-group">
+                <div class="input-field" id="wrap-subject">
+                  <i class="fa-solid fa-industry"></i>
+                  <select id="subject" required>
+                    <option value="">Subject</option>
+                    <option>Stone Division</option>
+                    <option>Sheet Metal Division</option>
+                    <option>Crane Division</option>
+                    <option>Industrial Equipment Infrastructure</option>
+                  </select>
+                </div>
+                <span class="field-error" id="err-subject"></span>
+              </div>
+            </div>
+
+            <!-- PRODUCT TYPE: appears after subject selection -->
+            <div class="form-row" id="productTypeRow" style="display:none;">
+              <div class="field-group" style="flex:1;">
+                <div class="input-field" id="wrap-productType">
+                  <i class="fa-solid fa-box-open"></i>
+                  <select id="productType">
+                    <option value="">Product Type</option>
+                  </select>
+                </div>
+                <span class="field-error" id="err-productType"></span>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <div class="input-field textarea-field" id="wrap-description">
+                <i class="fa-solid fa-pen"></i>
+                <textarea id="description" placeholder="Description" required></textarea>
+              </div>
+              <span class="field-error" id="err-description"></span>
+            </div>
+
+            <p class="form-error-msg" id="formErrorMsg">⚠ Please fill in all required fields correctly before submitting.</p>
+
+            <!-- API submission status -->
+            <div class="submit-status" id="submitStatus" style="display:none;">
+              <div class="submit-status-steps" id="submitSteps"></div>
+              <p class="submit-status-msg" id="submitStatusMsg"></p>
+            </div>
+
+            <button type="submit" id="submitBtn">Submit Enquiry</button>
+          </form>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- WHATSAPP FIXED BUTTON -->
+    <a class="whatsapp-btn" href="https://wa.me/919999999999" target="_blank" rel="noopener" title="Chat on WhatsApp">
+      <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 0C7.163 0 0 7.163 0 16c0 2.822.736 5.469 2.027 7.773L0 32l8.437-2.01A15.934 15.934 0 0016 32c8.837 0 16-7.163 16-16S24.837 0 16 0zm0 29.333a13.27 13.27 0 01-6.771-1.854l-.485-.287-5.01 1.194 1.234-4.874-.317-.502A13.267 13.267 0 012.667 16C2.667 8.637 8.637 2.667 16 2.667S29.333 8.637 29.333 16 23.363 29.333 16 29.333zm7.27-9.862c-.398-.199-2.355-1.162-2.72-1.295-.365-.132-.631-.199-.897.199-.266.398-1.03 1.295-1.263 1.561-.232.266-.465.299-.863.1-.398-.199-1.681-.62-3.202-1.977-1.183-1.056-1.982-2.36-2.214-2.758-.232-.398-.025-.613.175-.811.18-.178.398-.465.597-.698.199-.232.266-.398.398-.664.133-.266.066-.498-.033-.697-.1-.199-.897-2.162-1.229-2.96-.324-.777-.653-.672-.897-.684l-.764-.013c-.266 0-.697.1-1.063.498-.365.398-1.395 1.362-1.395 3.325s1.428 3.856 1.627 4.122c.199.266 2.81 4.291 6.808 6.02.951.41 1.693.655 2.272.839.954.304 1.823.261 2.51.158.766-.114 2.355-.963 2.688-1.893.333-.93.333-1.727.232-1.893-.099-.166-.365-.266-.763-.465z"/>
+      </svg>
+    </a>
+
+    <script src="script.js"></script>
+  </body>
+</html>
