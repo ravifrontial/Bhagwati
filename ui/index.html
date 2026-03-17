@@ -85,7 +85,6 @@
               </div>
             </div>
 
-            <!-- STATE & CITY with autocomplete -->
             <div class="form-row">
               <div class="field-group">
                 <div class="input-field ac-wrap" id="wrap-state">
@@ -111,8 +110,8 @@
                   <i class="fa-solid fa-layer-group"></i>
                   <select id="category" required>
                     <option value="">Category</option>
-                    <option>Purchase</option>
-                    <option>Service</option>
+                    <option value="Purchase">Purchase</option>
+                    <option value="Service">Service</option>
                   </select>
                 </div>
                 <span class="field-error" id="err-category"></span>
@@ -122,17 +121,16 @@
                   <i class="fa-solid fa-industry"></i>
                   <select id="subject" required>
                     <option value="">Subject</option>
-                    <option>Stone Division</option>
-                    <option>Sheet Metal Division</option>
-                    <option>Crane Division</option>
-                    <option>Industrial Equipment Infrastructure</option>
+                    <option value="Stone Division">Stone Division</option>
+                    <option value="Sheet Metal Division">Sheet Metal Division</option>
+                    <option value="Crane Division">Crane Division</option>
+                    <option value="Industrial Equipment Infrastructure">Industrial Equipment Infrastructure</option>
                   </select>
                 </div>
                 <span class="field-error" id="err-subject"></span>
               </div>
             </div>
 
-            <!-- PRODUCT TYPE: appears after subject selection -->
             <div class="form-row" id="productTypeRow" style="display:none;">
               <div class="field-group" style="flex:1;">
                 <div class="input-field" id="wrap-productType">
@@ -155,12 +153,6 @@
 
             <p class="form-error-msg" id="formErrorMsg">⚠ Please fill in all required fields correctly before submitting.</p>
 
-            <!-- API submission status -->
-            <div class="submit-status" id="submitStatus" style="display:none;">
-              <div class="submit-status-steps" id="submitSteps"></div>
-              <p class="submit-status-msg" id="submitStatusMsg"></p>
-            </div>
-
             <button type="submit" id="submitBtn">Submit Enquiry</button>
           </form>
         </div>
@@ -168,12 +160,19 @@
       </div>
     </section>
 
-    <!-- WHATSAPP FIXED BUTTON -->
+    <!-- WHATSAPP -->
     <a class="whatsapp-btn" href="https://wa.me/919999999999" target="_blank" rel="noopener" title="Chat on WhatsApp">
       <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
         <path d="M16 0C7.163 0 0 7.163 0 16c0 2.822.736 5.469 2.027 7.773L0 32l8.437-2.01A15.934 15.934 0 0016 32c8.837 0 16-7.163 16-16S24.837 0 16 0zm0 29.333a13.27 13.27 0 01-6.771-1.854l-.485-.287-5.01 1.194 1.234-4.874-.317-.502A13.267 13.267 0 012.667 16C2.667 8.637 8.637 2.667 16 2.667S29.333 8.637 29.333 16 23.363 29.333 16 29.333zm7.27-9.862c-.398-.199-2.355-1.162-2.72-1.295-.365-.132-.631-.199-.897.199-.266.398-1.03 1.295-1.263 1.561-.232.266-.465.299-.863.1-.398-.199-1.681-.62-3.202-1.977-1.183-1.056-1.982-2.36-2.214-2.758-.232-.398-.025-.613.175-.811.18-.178.398-.465.597-.698.199-.232.266-.398.398-.664.133-.266.066-.498-.033-.697-.1-.199-.897-2.162-1.229-2.96-.324-.777-.653-.672-.897-.684l-.764-.013c-.266 0-.697.1-1.063.498-.365.398-1.395 1.362-1.395 3.325s1.428 3.856 1.627 4.122c.199.266 2.81 4.291 6.808 6.02.951.41 1.693.655 2.272.839.954.304 1.823.261 2.51.158.766-.114 2.355-.963 2.688-1.893.333-.93.333-1.727.232-1.893-.099-.166-.365-.266-.763-.465z"/>
       </svg>
     </a>
+
+    <!-- TOAST -->
+    <div id="toast">
+      <span class="toast-icon"></span>
+      <span class="toast-msg"></span>
+      <button class="toast-close" onclick="hideToast()">✕</button>
+    </div>
 
     <script src="script.js"></script>
   </body>
