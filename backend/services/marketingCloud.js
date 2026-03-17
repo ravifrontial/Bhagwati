@@ -78,8 +78,12 @@ async function fireJourneyEvent(token, contactKey, payload) {
      subject     : payload.subject,
      productType : payload.productType,
      description : payload.description,
-     caseTokenId : payload.caseId,
-     CaseOrigin  : 'Website'
+     caseId      : payload.caseId,
+     CaseOrigin  : 'Website',
+     sentimentScore : payload.score,
+     sentimentMagnitude : payload.magnitude,
+     sentimentLabel : payload.label,
+     summary : payload.summary
   };
 
   const isPurchase = payload.category?.trim().toLowerCase() === 'purchase';

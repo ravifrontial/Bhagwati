@@ -2,7 +2,7 @@
 const express = require('express');
 const router  = express.Router();
 
-const { getSFToken, findContact, insertAccount, insertContact, insertLead, insertCase } = require('../services/salesforce');
+const { getSFToken, findContact, insertAccount, insertContact, insertLead, insertCase, getSentimentFromCaseID } = require('../services/salesforce');
 const { getMCToken, fireJourneyEvent } = require('../services/marketingCloud');
 
 /* ─────────────────────────────────────────────────
@@ -46,7 +46,6 @@ router.post('/', async (req, res) => {
   let contactId;
   try {
     contactId = await findContact(sfToken, email, normalizedMobile);
-    console.log('[Route] findContact result:', contactId ?? 'not found — will create');
   } catch (err) {
     console.error('[SF] findContact error:', err.response?.data || err.message);
     return res.status(500).json({
@@ -81,7 +80,7 @@ router.post('/', async (req, res) => {
   console.log(`[Route] category: "${category}" | normalizedCategory: "${normalizedCategory}" | isPurchase: ${isPurchase}`);
   console.log(`[Route] Will create: ${isPurchase ? 'LEAD' : 'CASE'}`);
 
-  let leadId, caseId;
+  let leadId, caseId, score, magnitude, label, summary;
   try {
     if (isPurchase) {
       leadId = await insertLead(sfToken, {
@@ -94,7 +93,18 @@ router.post('/', async (req, res) => {
       caseId = await insertCase(sfToken, contactId, {
         email, state, city, subject, productType, description
       });
-      console.log('[Route] Case flow completed, caseId:', caseId);
+
+      if(!caseId) throw new Error('Case creation failed: no caseId returned');
+
+      const sentimentFromCase = await getSentimentFromCaseID(sfToken, caseId);
+      console.log('[Route] Case flow completed, caseId:Sentiment', sentimentFromCase);
+      if(!sentimentFromCase) throw new Error('Failed to get sentiment from case ID');
+
+        score = sentimentFromCase.score;
+        magnitude = sentimentFromCase.magnitude;
+        label = sentimentFromCase.label;
+        summary = sentimentFromCase.summary;
+
     }
   } catch (err) {
     console.error(`[SF] ${isPurchase ? 'Lead' : 'Case'} creation error:`, err.response?.data || err.message);
@@ -124,7 +134,7 @@ router.post('/', async (req, res) => {
       firstName, lastName, email,
       mobile: normalizedMobile,
       state, city, category, subject, productType, description,
-      caseId
+      caseId, summary, score, magnitude, label
     });
     console.log('[MC] Journey event fired successfully');
   } catch (err) {

@@ -211,4 +211,47 @@ async function insertCase(token, contactId, payload) {
   return id;
 }
 
-module.exports = { getSFToken, findContact, insertAccount, insertContact, insertLead, insertCase };
+async function getSentimentFromCaseID(token, caseId) {
+  const SF_BASE = process.env.SF_BASE_URL;
+
+  const soql = `SELECT Case_Id__c, Sentiment_Score__c, Sentiment_Magnitude__c, Sentiment_Label__c, Summary__c FROM Case WHERE Id='${caseId}'`;
+
+  try {
+    // FIX: must be GET, with params + headers in the Axios CONFIG (3rd arg),
+    // NOT passed as the request body. Passing them as body caused 401 because
+    // the Authorization header was never actually sent.
+    const res = await axios.get(
+      `${SF_BASE}/services/data/v64.0/query`,
+      {
+        params : { q: soql },
+        headers: {
+          Authorization : `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    console.log(`[SF] getSentimentFromCaseID response:`, res.data);
+
+    if (res.data?.totalSize > 0) {
+      const record = res.data.records[0];
+      console.log(`[SF] Sentiment data for Case ${caseId}:`, record);
+      return {
+        caseId     : record.Case_Id__c,
+        score      : record.Sentiment_Score__c,
+        magnitude  : record.Sentiment_Magnitude__c,
+        label      : record.Sentiment_Label__c,
+        summary    : record.Summary__c
+      };
+    } else {
+      console.log(`[SF] No Case found with ID ${caseId}.`);
+      return null;
+    }
+
+  } catch (error) {
+    console.error(`[SF] Error fetching sentiment for Case ${caseId}:`, error.response?.data || error.message);
+    return null;
+  }
+}
+
+module.exports = { getSFToken, findContact, insertAccount, insertContact, insertLead, insertCase, getSentimentFromCaseID };
