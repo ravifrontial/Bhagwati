@@ -2,15 +2,15 @@
   --color: #c82624;
   --dark-color: #810806;
 }
-
+ 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
+ 
 /* ── SINGLE PAGE — no scroll ── */
 html, body {
   height: 100%;
   overflow: hidden;
 }
-
+ 
 body {
   font-family: 'Poppins', Arial, sans-serif;
   background: url("https://bhagwatimachines.com/img/bg-portfolio-2.webp") center/cover no-repeat fixed;
@@ -18,7 +18,7 @@ body {
   flex-direction: column;
   height: 100vh;
 }
-
+ 
 /* ═══════════════ NAVBAR ═══════════════ */
 .navbar {
   display: flex;
@@ -50,24 +50,27 @@ body {
 }
 .nav-links a:hover::after { width: 100%; }
 .menu-toggle { display: none; font-size: 26px; cursor: pointer; color: #fff; }
-
+ 
 /* ═══════════════ MAIN SECTION — fills remaining height with bottom gap ═══════════════ */
 .contact-section {
   flex: 1;
   min-height: 0;
-  padding: 14px 60px 20px;   /* bottom gap from viewport edge */
+  padding: 14px 60px 20px;
   display: flex;
-  align-items: stretch;
+  align-items: center;  
+  justify-content: center;
+  min-height: calc(100vh - 100px);
 }
-
+ 
 .contact-container {
   display: flex;
   gap: 32px;
   width: 100%;
-  /* FIX 2: stretch fills full height of section */
+  max-width: 1600px;  
+  margin: 0 auto;      
   align-items: stretch;
+   min-height: 520px;
 }
-
 /* ═══════════════ BOTH PANELS ═══════════════ */
 .about-company,
 .contact-form {
@@ -86,12 +89,12 @@ body {
 .contact-form::-webkit-scrollbar { width: 4px; }
 .about-company::-webkit-scrollbar-thumb,
 .contact-form::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
-
+ 
 .about-company:hover,
 .contact-form:hover {
   box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 18px rgba(200,38,36,0.25);
 }
-
+ 
 /* ── ABOUT — FIX 1: top-aligned ── */
 .about-company {
   padding: 32px 36px;
@@ -99,36 +102,52 @@ body {
   color: #fff;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;   /* top, not center */
-  align-items: flex-start;
+    justify-content: center;
+  border-left: 4px solid var(--color);
+  box-shadow: inset 4px 0 12px rgba(200,38,36,0.25);
 }
-.about-company h2 { font-size: 22px; margin-bottom: 14px; }
-.about-company p  { color: #cfcfcf; line-height: 1.75; margin-bottom: 12px; font-size: 13.5px; }
-
+.about-company h2 { font-size: 22px; margin-bottom: 18px; }
+.about-company p  { color: #cfcfcf; line-height: 1.75; margin-bottom: 14px; font-size: 13.5px;  max-width: 700px; }
+ 
+ 
+.about-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+  font-size: 12.5px;
+  color: #bbb;
+}
+ 
+.about-footer span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 /* ── FORM PANEL ── */
 .contact-form { padding: 26px 32px 28px; }
 .contact-form h2 { color: #fff; margin-bottom: 14px; font-size: 20px; }
-
+ 
 .contact-form form {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-
+ 
 /* FIX 4: flex-start stops sibling jump when error appears */
 .form-row {
   display: flex;
   gap: 12px;
   align-items: flex-start;
 }
-
+ 
 .field-group {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-width: 0;
 }
-
+ 
 .input-field {
   display: flex;
   align-items: center;
@@ -159,13 +178,13 @@ body {
   font-family: 'Poppins', sans-serif;
 }
 .input-field input::placeholder { color: #666; }
-
+ 
 /* FIX 9: select options dark background */
 .input-field select option {
   background: #1e1e1e;
   color: #fff;
 }
-
+ 
 .textarea-field { align-items: flex-start; height: auto; padding: 8px 12px; }
 textarea {
   background: transparent;
@@ -180,11 +199,11 @@ textarea {
   padding-top: 4px;
 }
 select { appearance: none; cursor: pointer; }
-
+ 
 /* ── FIELD STATES ── */
 .input-field.error { border-color: #ff6b6b; }
 .input-field.valid { border-color: transparent; }
-
+ 
 /* FIX 4: fixed height always reserved — no layout jump */
 .field-error {
   font-size: 10.5px;
@@ -198,7 +217,7 @@ select { appearance: none; cursor: pointer; }
   margin-top: 2px;
 }
 .field-error.show { visibility: visible; }
-
+ 
 /* ── FORM ERROR BANNER ── */
 .form-error-msg {
   font-size: 11.5px;
@@ -211,10 +230,10 @@ select { appearance: none; cursor: pointer; }
   display: none;
 }
 .form-error-msg.show { display: block; }
-
+ 
 /* hide old status box */
 #submitStatus { display: none !important; }
-
+ 
 /* ── SUBMIT BUTTON ── */
 button[type="submit"] {
   width: 100%;
@@ -240,7 +259,7 @@ button[type="submit"]:disabled {
   transform: none !important;
   box-shadow: none !important;
 }
-
+ 
 /* ═══════════════ TOAST — FIX 5 ═══════════════ */
 #toast {
   position: fixed;
@@ -282,7 +301,7 @@ button[type="submit"]:disabled {
   padding: 0 0 0 8px; line-height: 1; flex-shrink: 0;
 }
 .toast-close:hover { color: #fff; }
-
+ 
 /* ═══════════════ AUTOCOMPLETE ═══════════════ */
 .ac-wrap { position: relative; overflow: visible !important; }
 .ac-list {
@@ -307,7 +326,7 @@ button[type="submit"]:disabled {
 .ac-list li:hover, .ac-list li.active { background: var(--color); color: #fff; }
 .ac-list::-webkit-scrollbar { width: 4px; }
 .ac-list::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
-
+ 
 /* ═══════════════ AUTOFILL ═══════════════ */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
@@ -322,7 +341,7 @@ input:-webkit-autofill:focus {
   outline: none !important;
   box-shadow: none !important;
 }
-
+ 
 /* ═══════════════ WHATSAPP ═══════════════ */
 .whatsapp-btn {
   position: fixed;
@@ -338,7 +357,7 @@ input:-webkit-autofill:focus {
 }
 .whatsapp-btn:hover { transform: scale(1.1); box-shadow: 0 6px 24px rgba(37,211,102,0.5); }
 .whatsapp-btn svg { width: 28px; height: 28px; fill: #fff; }
-
+ 
 /* ═══════════════ RESPONSIVE — FIX 3 ═══════════════ */
 @media (max-width: 1200px) {
   .navbar { padding: 0 40px; }

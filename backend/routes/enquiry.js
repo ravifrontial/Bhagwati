@@ -80,7 +80,7 @@ router.post('/', async (req, res) => {
   console.log(`[Route] category: "${category}" | normalizedCategory: "${normalizedCategory}" | isPurchase: ${isPurchase}`);
   console.log(`[Route] Will create: ${isPurchase ? 'LEAD' : 'CASE'}`);
 
-  let leadId, caseId, score, magnitude, label, summary;
+  let leadId, caseId, modifiedCaseID, score, magnitude, label, summary;
   try {
     if (isPurchase) {
       leadId = await insertLead(sfToken, {
@@ -104,6 +104,7 @@ router.post('/', async (req, res) => {
         magnitude = sentimentFromCase.magnitude;
         label = sentimentFromCase.label;
         summary = sentimentFromCase.summary;
+        modifiedCaseID = sentimentFromCase.modifiedCaseId;
 
     }
   } catch (err) {
@@ -134,7 +135,7 @@ router.post('/', async (req, res) => {
       firstName, lastName, email,
       mobile: normalizedMobile,
       state, city, category, subject, productType, description,
-      caseId, summary, score, magnitude, label
+      modifiedCaseID, summary, score, magnitude, label
     });
     console.log('[MC] Journey event fired successfully');
   } catch (err) {

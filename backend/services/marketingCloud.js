@@ -78,7 +78,7 @@ async function fireJourneyEvent(token, contactKey, payload) {
      subject     : payload.subject,
      productType : payload.productType,
      description : payload.description,
-     caseId      : payload.caseId,
+     caseId      : payload.modifiedCaseID,
      CaseOrigin  : 'Website',
      sentimentScore : payload.score,
      sentimentMagnitude : payload.magnitude,

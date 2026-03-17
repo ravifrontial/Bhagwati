@@ -237,7 +237,7 @@ async function getSentimentFromCaseID(token, caseId) {
       const record = res.data.records[0];
       console.log(`[SF] Sentiment data for Case ${caseId}:`, record);
       return {
-        caseId     : record.Case_Id__c,
+        modifiedCaseId     : record.Case_Id__c,
         score      : record.Sentiment_Score__c,
         magnitude  : record.Sentiment_Magnitude__c,
         label      : record.Sentiment_Label__c,

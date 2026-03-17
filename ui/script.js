@@ -148,12 +148,12 @@ document.getElementById('subject').addEventListener('change', function() {
   const sel = document.getElementById('productType');
   const prods = subjectProducts[this.value];
   if (prods) {
-    sel.innerHTML = '<option value="">Product Type</option>';
+    sel.innerHTML = '<option value="" disabled selected>Select Product Type</option>';
     prods.forEach(p => { const o=document.createElement('option'); o.value=o.textContent=p; sel.appendChild(o); });
     row.style.display = 'flex';
   } else {
     row.style.display = 'none';
-    sel.innerHTML = '<option value="">Product Type</option>';
+    sel.innerHTML = '<option value="" disabled selected>Select Product Type</option>';
     clearState('productType');
   }
   validateField('subject'); checkFormValidity();
